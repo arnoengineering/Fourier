@@ -43,9 +43,22 @@ https://www.youtube.com/watch?v=TJGlxdW7Fb4&ab_channel=SteveBrunton
 https://www.youtube.com/watch?v=AShHJdSIxkY&t=1s&ab_channel=MarkJay
 get audio evey sample, save raw data to np array, then do fft ard rest yt
 
+
+try differnce between: matlib, scipy spec
+try live vs end
+change np aaray or list
+return alll max sounds for each frame mixed in
+
+from image loop correctly
+
+change xvsx plot
+change values for freq gen
+
 loop to set lines
 show image of pic in
 
+
+use scipi freq for end, do x dor live
 # def test_pos(val):
 #     i = 0
 #     for f in frequency:
@@ -91,15 +104,7 @@ audio to image
     #         line_fr = 2 * np.pi * np.arrage(rate*duration_per_pix) * fr/rate
     #         ax_sine.plot(line_fr, np.sin(line_fr))
     #
-    #     total_list = np.vstack(total_list, data_int)
     #
-    #     if total_list.shape[0] > 500:  # max size
-    #         break
-    #     plot_img(total_list)
-    #
-    # spec = spectrogram(total_list)
-    # save spec
-    # plt.show(spec)
 img_obj = Image.fromarray(total_list)
     # write to pic_file
     process_image(img_obj)

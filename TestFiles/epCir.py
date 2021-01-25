@@ -136,6 +136,7 @@ def animate_file(fname, interval=100, n_frames=100, threshold=0.9, rate=1):
     # Make directory structure
     dir_name = join('out')
     if exists(dir_name):
+
         rmtree(dir_name)
     makedirs(dir_name)
 
