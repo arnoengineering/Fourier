@@ -1,14 +1,14 @@
 import numpy as np
 from PIL import Image
-from pydub import AudioSegment
-
 import matplotlib.pyplot as plt
-from scipy.fft import fft
-from scipy.signal import spectrogram
+from scipy import fft
+# from scipy.signal import spectrogram
 import struct
 import pyaudio
+
+
 # get sound rom im
-pic_file = ''
+pic_file = 'media/DSC_0178.JPG'
 sound_file = ''
 return_img = ''
 ret_sound = ''
@@ -19,34 +19,31 @@ Channels = 1
 rate = 44100
 
 p = pyaudio.PyAudio()
-stream = p.open(
-                format=Format,
-                chanels=Channels,
-                rate=rate,
-                output=True,
-                input=True,
-                frames_per_buffer=Chuck)
 
-stream_out = p.open(
-                format=pyaudio.paFloat32,
-                chanels=Channels,
-                rate=rate,
-                output=True,
-                input=True,
-                frames_per_buffer=Chuck)
+
+def stream_obj(form):
+    st = p.open(format=form, channels=Channels, rate=rate,
+                output=True, input=True, frames_per_buffer=Chuck)
+    return st
 
 
 # axis for local plot
-fig, (ax, ax2, ax_sine, ax_his) = plt.subplots(4)
-x_data = np.arrange(0, 2 * Chuck, 2)
-line, = ax.plot(x_data, np.random.rand(Chuck))
-ax.set_xlim(0, Chuck)
-ax.set_ylim(0, 255)
+def set_f_plots(plot_num, col='b', log=True):
+    # also add for num line in p
+    # x_val, freq
+    if log:
+        x_val = frequency
+    else:
+        x_val = x_data
+    line_val, = ax[plot_num[0], plot_num[1]].plot(x_val, np.random.rand(len(x_val)), c=col)
+    ax[plot_num].set_xlim(0, Chuck)
+    ax[plot_num].set_ylim(0, 255)
+    return line_val
 
-f_data = np.linspace()
-line2, = ax2.plot(f_data, np.random.rand(Chuck))
-ax2.set_xlim(0, Chuck)
-ax2.set_ylim(0, 255)
+
+stream_out = stream_obj(pyaudio.paFloat32)
+stream = stream_obj(Format)
+
 
 img = Image.open(pic_file)
 img.convert('LA')
@@ -57,137 +54,86 @@ x_size = 500
 y_size = int(500 * ratio)
 pix_map = img.load()
 
-
-# # sound values
-# audio = AudioSegment.silent(duration=0)
+# sound values
 duration_per_pix = 0.1  # ms per line
-frequency = np.logspace(20, 20000, x_size)
+frequency = np.geomspace(20, 20000, x_size)
+
+# plots
+x_data = np.linspace(0, 2 * Chuck, Chuck)
+fig, ax = plt.subplots(2, 2)
+line = set_f_plots((0, 0), log=False)
+line2 = set_f_plots((1, 0))
+
+freq_lines = [set_f_plots((1, 1), col=c_val, log=False) for c_val in ['b', 'r', 'g', 'p', 'v']]
+
+plt.show(block=False)
 
 
-def max_freq(hz_ls, num):
-    high_freq = {}
-    c_l = hz_ls
-    for n in range(num):
-        max_fr = max(c_l)
-        high_freq[frequency[c_l.index(max_fr)]] = max_fr
-        c_l.remove(max_fr)
-    return high_freq
+def log_bin(hz_ls, hz_vals):  # hz_list be dict?
+    cor_freq = []
+    dig_index = np.digitize(hz_ls, frequency)
+    for num, n_val in enumerate(dig_index):
+        cor_freq[n_val] += hz_vals[n_val]
+    return cor_freq
 
 
 def gen_sound(hz, pix_val):
     # scale amp, freq
-    freq = frequency[hz] 
+    freq = frequency[hz]
     samples = (np.sin(2*np.pi*np.arange(rate*duration_per_pix)*freq/rate)).astype(np.float32).tobytes()
     sine_wav = pix_val * np.sin(samples)  # get value per x
-    # s_wav = freq  # sine(freq)
-    # wav = s_wav.to_audio_segment(duration_per_pix, am_scale*pix_val)
-    # wav = wav.fade_in(0.1 * duration_per_pix).fade_out(0.1 * duration_per_pix)
     return sine_wav
-
-
-def plot_img(lines):  # create 3d image
-    plt.pcolormesh(lines)
-    # plt.contourf(lines)
-    plt.xticks(frequency)
-    plt.xlabel('Frequency')
-    plt.yticks([duration_per_pix * n for n in range(lines.shape[0])])
-    plt.ylabel('Time')
-
-    pass
+#
+#
+# def plot_img(lines):  # create 3d image
+#     plt.pcolormesh(lines)
+#     # plt.contourf(lines)
+#     plt.xticks(frequency)
+#     plt.xlabel('Frequency')
+#     plt.yticks([duration_per_pix * n for n in range(lines.shape[0])])
+#     plt.ylabel('Time')
 
 
 def audio_to_image(from_file=False):
-    total_list = np.array(frequency)  # titles
+    # total_list = np.array(frequency)  # titles
     aud_im = 1
     while aud_im:  # while speaking
         if from_file:
-            data_int = []  # placeholder
+            data_np = []  # placeholder
         else:
-            data = stream.read()
+            data = stream.read(Chuck)
             data_int = struct.unpack(str(2 * Chuck) + 'B', data)
-        line.set_ydata(data_int)
+            data_np = np.array(data_int, dtype='b')[::2] + 128
+
+        # fft
+        freq_fft = fft.fft(data_np)
+        fft_freq = fft.fftfreq(freq_fft.size, 1 / rate)  # todo merge for argsort
+        max_freq_vals = np.argpartition(freq_fft, -5)[-5:]
+        max_freq = fft_freq[max_freq_vals]
+        # for n, f in enumerate(max_freq):
+        #     fr = np.sin(np.linspace(0, 2 * np.pi, 500))
+        #     freq_lines[n].set_ydata(fr)
+
+        line.set_ydata(data_np)
+        line2.set_ydata(freq_fft)  # live color x
+
         fig.canvas.draw()
         fig.canvas.flush_events()
 
-        # fft
-        freq_fft = fft(data_int)
-        fft_freq = fft.fftfreq(freq_fft)
-        line2.set_ydata(freq_fft)  # live color x
-        # gen tone for each sine
-        freq_ls = max_freq(freq_fft, 5)
-        # sum_x_fr = sum(freq_ls)
-        for fr in freq_ls:
-            line_fr = 2 * np.pi * np.arrage(rate*duration_per_pix) * fr/rate
-            ax_sine.plot(line_fr, np.sin(line_fr))
 
-        total_list = np.vstack(total_list, data_int)
-
-        if total_list.shape[0] > 500:  # max size
-            break
-        plot_img(total_list)
-
-    spec = spectrogram(total_list)
-    # save spec
-    plt.show(spec)
-    img_obj = Image.fromarray(total_list)
-    # write to pic_file
-    process_image(img_obj)
+def aud_from_im():
+    row_seg = []
+    for y in range(y_size):
+        seg = np.linspace(0, np.pi * 2, int(rate * duration_per_pix))
+        for x in range(x_size):
+            pix = pix_map.getpixel((x, y))
+            seg += gen_sound(x, pix)
+            # for sum, plot x freq*1
+        row_seg.extend(seg)
+    stream_out.write(row_seg)
+    stream_out.stop_stream()
+    stream_out.close()
+    audio_to_image(from_file=True)
 
 
-def process_image(img_o):
-    """turn spec image into real image"""
-    # save
-    img_o.save(return_img)
-
-
-row_seg = []
-for y in range(y_size):
-    # AudioSegment.silent(duration=0)
-    seg = np.linspace(0, np.pi * 2, int(rate * duration_per_pix))
-    for x in range(x_size):
-        pix = pix_map.getpixel((x, y))
-        seg += gen_sound(x, pix)
-        # for sum, plot x freq*1
-    row_seg.extend(seg)
-stream_out.write(row_seg)
-stream_out.stop_stream()
-stream_out.close()
-audio_to_image(from_file=True)
-
-"""use spect to view, maybe just save, 
-use yt for live waveform, save data to np array for spextrograme at end
-https://www.youtube.com/watch?v=TJGlxdW7Fb4&ab_channel=SteveBrunton
-https://www.youtube.com/watch?v=AShHJdSIxkY&t=1s&ab_channel=MarkJay
-get audio evey sample, save raw data to np array, then do fft ard rest yt
-show image of pic in
-# def test_pos(val):
-#     i = 0
-#     for f in frequency:
-#         if val > f:
-#             break
-#         i += 1
-#     return frequency[i - 1]
-*1 for feq
-seg += get_freq: get s_wave
-then for duration/pixel
-seg_tot[duration_pix: duration_pix + chuck] = seg_tot
- after all read from file, then plot,... same as if from live except stream
-
-do
-get image, yes
-loop though image: yes
-get sinedata
-save sinedata
-save to file, then
-plot live below
-
-while mike yes
-get audio: yes
-decode yes
-fft 
-save to array yes
-plot decode and live, 
-plot 5 largest fequcy on dif subplot, diff colors
-do spect, yes
-save spect
-"""
+audio_to_image()

@@ -1,19 +1,12 @@
 import numpy as np
 from scipy.fft import fft, fftfreq
-from svgpathtools import svg2paths  # Path, Line, QuadraticBezier, CubicBezier, Arc,
+from svgpathtools import svg2paths
 # from matplotlib import pyplot as plt
-"""BLUR,CONTOUR
-DETAIL
-EDGE_ENHANCE
-"""
 
-"""smooth image
-convert to svg
-get array from image,
- np.exp^360"""
 
 file = 'Do_Mayor_armadura.svg'
-poly_file = 'poly_file.csv'
+poly_file = 'media/poly_file.csv'
+n_file = 'polynomial_form.txt'
 
 # get path from svg, # todo check numper of paths, sub-paths
 paths, attributes = svg2paths(file)
@@ -42,6 +35,26 @@ four_freq = fftfreq(four_size, 1 / four_size)
 # get largest indexes, maybe else just del
 
 
+def save_coef():
+    with open(poly_file) as f:
+        coefs = f.readlines()
+
+    poly_ord = len(coefs)
+
+    newlines = []
+    for n in range(poly_ord):
+        li = coefs[n]
+        x_val = poly_ord - (n + 1)
+        if x_val > 0:
+            st = f'({li})x^({x_val}) +'
+        else:
+            st = f'({li})'
+        newlines.append(st)
+
+    with open(n_file) as f:
+        f.writelines(newlines)
+
+
 def graph_four(freq, amp):
     # amp--or initval:
     # a+bj
@@ -55,52 +68,3 @@ print('\nfor in\n')
 # print(for_in)
 
 # np.savetxt(poly_file, polynom.coeffs)
-
-
-"""
-svg:
-extend all paths 
-for path in paths:
-decode path
-p_total.append[path]
-
-convert svg?
-get img svg y
-get curves y
-for each curve get fft y
-comb curves y
-
-for each freq disp, show time varimg abs
-pos, vs time
-show pos variang
-let circles run with initial f
-do plot circ
-plot sum f
-save animation
-
-From: https://github.com/skyzh/fourier-transform-drawing/blob/master/analysis/analysis.py
-fp = open("fft_data.json")
-fft_data = json.load(fp)
-complex_real = array(list(map(lambda d: d["x"], fft_data)))
-complex_imag = array(list(map(lambda d: d["y"], fft_data)))
-complex_data = complex_real + 1j * complex_imag
-
-# print(complex_data)
-
-n = len(complex_data)
-t = linspace(0, 1, n)
-
-# print(t)
-
-freq_range = 150
-
-freq_map = dict()
-
-for k in arange(-freq_range, freq_range + 1):
-    xx = -2 * pi * k * 1j * t
-    c_n = sum(complex_data * exp(xx)) / n
-    # print(k, c_n)
-    freq_map[int(k)] = { 'x': real(c_n), 'y': imag(c_n) }
-
-print(json.dumps(freq_map))
-"""
