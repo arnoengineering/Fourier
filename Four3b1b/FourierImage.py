@@ -4,8 +4,8 @@ from svgpathtools import svg2paths
 # from matplotlib import pyplot as plt
 
 
-file = 'Do_Mayor_armadura.svg'
-poly_file = 'media/poly_file.csv'
+file = '../Do_Mayor_armadura.svg'
+poly_file = '../media/poly_file.csv'
 n_file = 'polynomial_form.txt'
 
 # get path from svg, # todo check numper of paths, sub-paths
@@ -31,6 +31,8 @@ polynom = np.poly1d(poly_ls)
 for_ls = fft(polynom(input_list))
 four_size = for_ls.size()
 four_freq = fftfreq(four_size, 1 / four_size)
+
+four_dict = dict(zip(four_freq, for_ls))  # frequncy, amp
 
 # get largest indexes, maybe else just del
 

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import fft
-# from scipy.signal import spectrogram
+from scipy.signal import spectrogram
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -74,13 +74,13 @@ def plot_img(lines):  # create 3d image
 
 def save_spec(hz_data):
     # list split
-    plt.specgram(hz_data, Fs=rate)
-    plt.colorbar()
-    plt.show()
+    spectrogram(hz_data)
+    # plt.colorbar()
+    plt.imshow()
 
 
 def audio_to_image(from_file=None):
-    total_list = []  # np.zeros(Chuck)  # titles
+    total_list = np.zeros(Chuck)  # titles
     aud_im = 1
     while aud_im:  # while speaking
         if from_file is not None:
@@ -108,18 +108,19 @@ def audio_to_image(from_file=None):
             fr = scale + scale * f_scale * np.sin(np.log10(f) * np.linspace(0, 20, Chuck))
             freq_lines[n].set_ydata(fr)
 
-        # total_list = np.vstack(total_list, data_np)
+        total_list = np.vstack((total_list, data_np))
         #
-        # if total_list.shape[0] > 500:  # max size
-        #     break
-        plot_img(total_list)
+        print(total_list.shape)
+        if total_list.shape[0] > 100:  # max size
+            break
+        # plot_img(total_list)
 
         line.set_ydata(data_np)
         line2.set_ydata(np.abs(freq_fft))  # live color x
 
         fig.canvas.draw()
         fig.canvas.flush_events()
-    # save_spec(total_list)
+    save_spec(total_list)
 
 
 def aud_from_im():
@@ -165,7 +166,7 @@ freq_lines = [set_f_plots((1, 1), col=c_map(c_val), log=False) for c_val in rang
 
 plt.show(block=False)
 
-from_where = 'sound' #input('type')
+from_where = 'sound' # input('type')
 if from_where == 'im':
     # get sound rom im
     pic_file = 'media/DSC_0178.JPG'
@@ -173,4 +174,4 @@ if from_where == 'im':
 
 elif from_where == 'sound':
     audio_to_image()
-audio_to_image()
+

@@ -9,17 +9,33 @@ def compon_ls(ls):
     return real_ls, imag_ls
 
 
+vector = []
 # anim circle
-def ani_circle(c_ls):  # assume each has st_pos, pos
-    # vector p
-    orig = list(c_ls['orig'])
-    final = list(c_ls['pos'])
-    plt.quiver(orig, final)
-    for circle in c_ls:
-        org = circle['org']
-        pos = circle['pos']
 
-        plt.Circle(org, np.hypot(*pos))  # pos, tuple, is this a tuple?
+
+def ani_circle(dt):  # assume each has st_pos, pos
+    # dt coming in np.linsp(2pi)
+    # bring dt
+    # vector p
+    v_or = 0  # change from or to last vec
+    for v in vector:
+        # freq from x, maybe add omega
+        ang_vel = v['freq'] / (2 * np.pi)
+        # pos relative to origin
+        v['pos'] += np.cross(v['pos'], (0, 0, ang_vel)) * dt
+        v['orig'] = v_or
+        v_or += v['pos']
+
+    pl
+    #
+    # orig = list(c_ls['orig'])
+    # final = list(c_ls['pos'])
+    # plt.quiver(orig, final)
+    # for circle in c_ls:
+    #     org = circle['org']
+    #     pos = circle['pos']
+    #
+    #     plt.Circle(org, np.hypot(*pos))  # pos, tuple, is this a tuple?
 
 
 # rad_vals = np.pi * np.linspace(0, 2, 10)

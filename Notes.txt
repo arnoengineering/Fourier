@@ -13,6 +13,8 @@ do file svg
 after animation either 3b1b or circles
 this, plot animation, circle postion changes and angle of rad changes, add tip of las arrow to plot
 
+do ani first then after add ui and mplib
+
 svg:
 extend all paths
 for path in paths:
