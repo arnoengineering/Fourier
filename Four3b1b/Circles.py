@@ -27,13 +27,13 @@ class Fourier_e_pi(Scene):
         # config
         self.vect_conf = {"buff": 0, "max_tip_length_to_length_ratio": 0.35, "tip_length": 0.15,
                           "max_stroke_width_to_length_ratio": 10, "stroke_width": 2}
-
+        self.drawn_path_stroke_width = 2
         self.circle_conf = {"stroke_width": 1}
         self.path_color = YELLOW
         self.param_step = 0.001
 
         self.vect_num = 200
-        self.slow_factor = 0.2
+        self.slow_factor = 0.1
 
         self.vect_clock = ValueTracker(0)
         self.vect_clock.add_updater(lambda m, dt: m.increment_value(dt * self.slow_factor))
@@ -43,6 +43,7 @@ class Fourier_e_pi(Scene):
         self.sine_y = [0, 4]
 
         self.colors = [BLUE_D, BLUE_C, BLUE_E, GREY_BROWN]
+        self.drawn_path_color = GREEN
         self.x_min = 0
         self.y_min = 0
 
@@ -58,15 +59,37 @@ class Fourier_e_pi(Scene):
     def get_total_path(self, vectors):
         # path on x, y parametric makes image
         vect_data = {v.coef: v.freq for v in vectors}
-        # x = complex_to_R3(vect_data.keys()[0] * np.exp(TAU * 1j * freq * t)
+
         path = ParametricFunction(lambda t: ORIGIN + np.sum(np.stack([complex_to_R3(coef * np.exp(TAU * 1j * freq * t))
                                                                       for coef, freq in vect_data.items()]), axis=0),
                                   t_min=0, t_max=1, step_size=self.param_step, color=self.path_color)
         return path
     
-    # def path_til_now(self, tot_path):
-    #     # todo add to glob
-    #     c_p = np.array([tot_path.point_from_proportion(t) for t in np.linspace()]) # elaped time
+    def path_till_now(self, tot_path, stroke_width=None):
+
+        if stroke_width is None:
+            stroke_width = self.drawn_path_stroke_width
+
+        broken_path = CurvesAsSubmobjects(tot_path)
+        broken_path.curr_time = 0
+
+        def update_path(path, dt):
+            # alpha = path.curr_time * self.get_slow_factor()
+            alpha = self.vect_clock.get_value()
+            n_curves = len(path)
+            for a, sp in zip(np.linspace(0, 1, n_curves), path):
+                b = alpha - a
+                if b < 0:
+                    width = 0
+                else:
+                    width = stroke_width * (1 - (b % 1))
+                sp.set_stroke(width=width)
+            path.curr_time += dt
+            return path
+
+        broken_path.set_color(self.drawn_path_color)
+        broken_path.add_updater(update_path)
+        return broken_path
     #
     # def get_time_path(self, vectors):
     #     # hight vs time
@@ -74,7 +97,6 @@ class Fourier_e_pi(Scene):
     #     # map circ --> sin, just many
     #     # create line then update high, move x over for t-1 then ad line from pos(t-1) to pos t
     #     # uses path above, just shifts x by t evey t
-    #     # todo add dom---range
     #     move_rate = 5
     #     path = self.get_total_path(vectors)
     #     path_func = ParametricFunction(lambda t: (move_rate * LEFT * t, path.function(t)[1] * UP))  # get y
@@ -83,7 +105,7 @@ class Fourier_e_pi(Scene):
     #     path_func_xt.add_updater(lambda m: m.shift(m.get_top()[1] - self.sine_y))  # moves y
     #     return path_func, path_func_xt
     #
-    # def intersect_line(self, curve):  # todo glob?
+    # def intersect_line(self, curve):
     #
     #     hor_line = Line(tip.get_center(), curve.get_end())
     #     vert_line = Line([curve.get_end()[0], 0], curve.get_end())  # from 0 at x to y at x, maybe
@@ -91,8 +113,8 @@ class Fourier_e_pi(Scene):
     #     return vert_line, hor_line
 
     def create_vectors(self, freq, coef):
-        four_d = dict(sorted(zip(freq[:self.vect_num + 1], coef[:self.vect_num + 1]),
-                             key=lambda item: np.abs(item[1])))
+        four_d = dict(sorted(zip(freq, coef),
+                             key=lambda item: np.abs(item[1]), reverse=True)[:self.vect_num + 1])
 
         vectors = VGroup()
         center_tracker = VectorizedPoint(ORIGIN)
@@ -140,14 +162,14 @@ class Fourier_e_pi(Scene):
 
     def create_circles(self, vectors):
         # wrapper
-        circles = VGroup(*[self.create_circ(vector, color) for vector, color in
+        circles = VGroup(*[self.create_circ(vector, colors) for vector, colors in
                          zip(vectors, self.get_color())])
-        # vect is lkist of vect cacl above corespondincg circ
+        # vect is list of vect calc above corespondincg circ
         return circles
 
-    def create_circ(self, vect, color):  # origial rort
+    def create_circ(self, vect, colors):  # origial rort
         # set vect_origin
-        circle = Circle(color=color)
+        circle = Circle(color=colors)
         circle.start = vect.start
         circle.rad = vect.get_length
 
@@ -159,6 +181,18 @@ class Fourier_e_pi(Scene):
         # on last follow pat, show orig
         circle.set_width(2 * circle.rad())  # back prop
         circle.move_to(circle.start())
+
+    def four(self, path):
+        samples = path.points  # np.array([path.point_from_proportion(t) for t in np.linspace(0, 1, self.n_samp)])
+        four_samples = samples[:, 0] + 1j * samples[:, 1]
+        for_ls = fft.fft(four_samples) / four_samples.size
+        four_size = for_ls.size
+
+        four_freq = fft.fftfreq(four_size, 1 / four_size)
+        # shift = fft.fftshift(four_freq)
+        # four_coefs_pos = for_ls[:four_size//2]
+        # four_coefs_neg = for_ls[-(four_size // 2):]
+        return four_freq, for_ls
 
 
 class Image_show(Fourier_e_pi):
@@ -176,16 +210,9 @@ class Image_show(Fourier_e_pi):
         circles = self.create_circles(vectors)
 
         traced_path = self.get_total_path(vectors)
-        # path_curr = self.path_til_now(traced_path)
-        # wavey, wavex = self.get_time_path(vectors)
-        # h_line = always_redraw(
-        #     lambda: self.intersect_line(circles, wave)
-        # )
+        path_curr = self.path_till_now(traced_path)
 
-        # Why?
-        # vectors.update(-1 / self.camera.frame_rate * self.slow_factor)
-        #
-        self.add(vectors, circles, traced_path, path)  # wavey, wavex)  # , h_line)
+        self.add(vectors, circles, traced_path, path, path_curr)  # wavey, wavex)  # , h_line)
 
         self.wait(run_time)
         
@@ -201,15 +228,3 @@ class Image_show(Fourier_e_pi):
         path.set_fill(opacity=0)
         path.set_stroke(WHITE, 1)
         return path
-
-    def four(self, path):
-        samples = path.points  # np.array([path.point_from_proportion(t) for t in np.linspace(0, 1, self.n_samp)])
-        four_samples = samples[:, 0] + 1j * samples[:, 1]
-        for_ls = fft.fft(four_samples) / four_samples.size
-        four_size = for_ls.size
-
-        four_freq = fft.fftfreq(four_size, 1 / four_size)
-        # shift = fft.fftshift(four_freq)
-        # four_coefs_pos = for_ls[:four_size//2]
-        # four_coefs_neg = for_ls[-(four_size // 2):]
-        return four_freq, for_ls

@@ -1,42 +1,39 @@
 from manim import *
+import os
 import scipy
+import itertools as it
 
 
 class FourierCirclesScene(Scene):
-    CONFIG = {
-        "n_vectors": 10,
-        "big_radius": 2,
-        "colors": [
-            BLUE_D,
-            BLUE_C,
-            BLUE_E,
-            GREY_BROWN,
-        ],
-        "circle_style": {
+
+    def setup(self):
+
+        self.big_radius = 2
+
+        self.circle_style = {
             "stroke_width": 2,
-        },
-        "vector_config": {
+        }
+        self.vector_config = {
             "buff": 0,
             "max_tip_length_to_length_ratio": 0.35,
             "tip_length": 0.15,
             "max_stroke_width_to_length_ratio": 10,
             "stroke_width": 2,
-        },
-        "circle_config": {
+        }
+        self.circle_config = {
             "stroke_width": 1,
-        },
-        "base_frequency": 1,
-        "slow_factor": 0.25,
-        "center_point": ORIGIN,
-        "parametric_function_step_size": 0.001,
-        "drawn_path_color": YELLOW,
-        "drawn_path_stroke_width": 2,
-    }
+        }
+        self.base_frequency = 1
+        self.slow_factor = 0.25
+        self.center_point = ORIGIN
+        self.parametric_function_step_size = 0.001
+        self.drawn_path_color = YELLOW
+        self.drawn_path_stroke_width = 2
+        self.n_vectors = 10
+        self.colors = [BLUE_D, BLUE_C, BLUE_E, GREY_BROWN]
+        # self.slow_factor_tracker = ValueTracker(
+        #     self.slow_factor
 
-    def setup(self):
-        self.slow_factor_tracker = ValueTracker(
-            self.slow_factor
-        )
         self.vector_clock = ValueTracker(0)
         self.vector_clock.add_updater(
             lambda m, dt: m.increment_value(
@@ -46,7 +43,7 @@ class FourierCirclesScene(Scene):
         self.add(self.vector_clock)
 
     def get_slow_factor(self):
-        return self.slow_factor_tracker.get_value()
+        return self.slow_factor
 
     def get_vector_time(self):
         return self.vector_clock.get_value()
@@ -89,7 +86,7 @@ class FourierCirclesScene(Scene):
         return vectors
 
     def get_rotating_vector(self, coefficient, freq, center_func):
-        vector = Vector(RIGHT, **self.vector_config)
+        vector = Vector(RIGHT)
         vector.scale(abs(coefficient))
         if abs(coefficient) == 0:
             phase = 0
@@ -143,12 +140,12 @@ class FourierCirclesScene(Scene):
         center = vectors[0].get_start()
 
         path = ParametricFunction(
-            lambda t: center + reduce(op.add, [
+            lambda t: center + np.sum(np.stack([
                 complex_to_R3(
                     coef * np.exp(TAU * 1j * freq * t)
                 )
                 for coef, freq in zip(coefs, freqs)
-            ]),
+            ]), axis=0),
             t_min=0,
             t_max=1,
             color=color,
@@ -262,68 +259,19 @@ class FourierCirclesScene(Scene):
         return result
 
 
-class FourierSeriesIntroBackground4(FourierCirclesScene):
-    CONFIG = {
-        "n_vectors": 4,
-        "center_point": 4 * LEFT,
-        "run_time": 30,
-        "big_radius": 1.5,
-    }
-
-    def construct(self):
-        circles = self.get_circles()
-        path = self.get_drawn_path(circles)
-        wave = self.get_y_component_wave(circles)
-        h_line = always_redraw(
-            lambda: self.get_wave_y_line(circles, wave)
-        )
-
-        # Why?
-        circles.update(-1 / self.camera.frame_rate)
-        #
-        self.add(circles, path, wave, h_line)
-        self.wait(self.run_time)
-
-    def get_ks(self):
-        return np.arange(1, 2 * self.n_vectors + 1, 2)
-
-    def get_freqs(self):
-        return self.base_frequency * self.get_ks()
-
-    def get_coefficients(self):
-        return self.big_radius / self.get_ks()
-
-
-class FourierSeriesIntroBackground8(FourierSeriesIntroBackground4):
-    CONFIG = {
-        "n_vectors": 8,
-    }
-
-
-class FourierSeriesIntroBackground12(FourierSeriesIntroBackground4):
-    CONFIG = {
-        "n_vectors": 12,
-    }
-
-
-class FourierSeriesIntroBackground20(FourierSeriesIntroBackground4):
-    CONFIG = {
-        "n_vectors": 20,
-    }
-
-
 class FourierOfPiSymbol(FourierCirclesScene):
-    CONFIG = {
-        "n_vectors": 51,
-        "center_point": ORIGIN,
-        "slow_factor": 0.1,
-        "n_cycles": 1,
-        "tex": "\\pi",
-        "start_drawn": False,
-        "max_circle_stroke_width": 1,
-    }
 
     def construct(self):
+        self.f_name = os.path.join(os.path.dirname(__file__), 'Do_Mayor_armadura.svg')
+        self.height = 10
+        self.n_vectors = 51
+        self.center_point = ORIGIN
+        self.slow_factor = 0.1
+        self.n_cycles = 1
+        self.tex = "\\pi"
+        self.start_drawn = False
+        self.max_circle_stroke_width = 1
+
         self.add_vectors_circles_path()
         for n in range(self.n_cycles):
             self.run_one_cycle()
@@ -335,7 +283,7 @@ class FourierOfPiSymbol(FourierCirclesScene):
         circles = self.get_circles(vectors)
         self.set_decreasing_stroke_widths(circles)
         # approx_path = self.get_vector_sum_path(circles)
-        drawn_path = self.get_drawn_path(vectors)
+        drawn_path = self.get_vector_sum_path(vectors)
         if self.start_drawn:
             self.vector_clock.increment_value(1)
 
@@ -364,9 +312,11 @@ class FourierOfPiSymbol(FourierCirclesScene):
         return circles
 
     def get_path(self):
-        tex_mob = TexMobject(self.tex)
-        tex_mob.set_height(6)
-        path = tex_mob.family_members_with_points()[0]
+        # tex_mob = TexMobject(self.tex)
+        # tex_mob.set_height(6)
+        # path = tex_mob.family_members_with_points()[0]
+        svg = SVGMobject(self.f_name, height=self.height, stroke_width=2, fill=False, fill_opacity=0)
+        path = svg.family_members_with_points()[0]
         path.set_fill(opacity=0)
         path.set_stroke(WHITE, 1)
         return path
